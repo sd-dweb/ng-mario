@@ -99,6 +99,8 @@ export interface LevelData {
   id: string;
   name: string;
   worldName: string;
+  title?: string;
+  description?: string;
   timeLimit: number;
   backgroundColor: string;
   theme: 'overworld' | 'underground' | 'athletic' | 'castle';
@@ -116,3 +118,18 @@ export interface LevelData {
     targetY?: number;
   }>;
 }
+
+export interface LevelConfig {
+  id: string;
+  worldName: string;
+  name: string;
+  title: string;
+  description: string;
+  theme: 'overworld' | 'underground' | 'athletic' | 'castle';
+  timeLimit: number;
+  backgroundColor: string;
+  icon: string;
+  badge: string;
+  generate: () => LevelData;
+}
+

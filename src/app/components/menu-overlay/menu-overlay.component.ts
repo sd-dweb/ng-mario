@@ -2,6 +2,8 @@ import { Component, inject, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameStateService } from '../../state/game-state.service';
 import { GameState } from '../../engine/types';
+import { LEVELS_CONFIG } from '../../config/levels.config';
+
 
 @Component({
   selector: 'app-menu-overlay',
@@ -101,22 +103,19 @@ import { GameState } from '../../engine/types';
           <div class="modal-content nes-panel">
             <h3 class="modal-title">SELECT WORLD</h3>
             <div class="level-grid">
-              <button class="nes-btn level-btn" (click)="onSelectLevel(0)">
-                <span class="level-tag">WORLD 1-1</span>
-                <span class="level-desc">GRASSY OVERWORLD</span>
-              </button>
-              <button class="nes-btn level-btn" (click)="onSelectLevel(1)">
-                <span class="level-tag">WORLD 1-2</span>
-                <span class="level-desc">UNDERGROUND CAVERN</span>
-              </button>
-              <button class="nes-btn level-btn" (click)="onSelectLevel(2)">
-                <span class="level-tag">WORLD 1-3</span>
-                <span class="level-desc">ATHLETIC TREETOPS</span>
-              </button>
-              <button class="nes-btn level-btn nes-btn-primary" (click)="onSelectLevel(3)">
-                <span class="level-tag">WORLD 1-4</span>
-                <span class="level-desc">BOWSER'S CASTLE 🔥</span>
-              </button>
+              @for (level of levels; track level.id; let idx = $index) {
+                <button 
+                  class="nes-btn level-btn" 
+                  [class.nes-btn-primary]="level.theme === 'castle'"
+                  (click)="onSelectLevel(idx)">
+                  <div class="level-btn-header">
+                    <span class="level-tag">{{ level.icon }} {{ level.name }}</span>
+                    <span class="level-badge">{{ level.badge }}</span>
+                  </div>
+                  <span class="level-title">{{ level.title }}</span>
+                  <span class="level-desc">{{ level.description }}</span>
+                </button>
+              }
             </div>
             <button class="nes-btn close-btn" (click)="showLevelSelect.set(false)">
               BACK
@@ -332,19 +331,44 @@ import { GameState } from '../../engine/types';
     .level-btn {
       flex-direction: column;
       align-items: flex-start;
-      padding: 12px 10px;
+      padding: 12px 14px;
       text-align: left;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .level-btn-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
     }
 
     .level-tag {
       font-size: 11px;
       color: #ffd700;
-      margin-bottom: 4px;
+    }
+
+    .level-badge {
+      font-size: 7px;
+      background: #0058f8;
+      color: #fff;
+      padding: 2px 6px;
+      border: 1px solid #fff;
+      letter-spacing: 1px;
+    }
+
+    .level-title {
+      font-size: 9px;
+      color: #ffffff;
+      font-weight: bold;
     }
 
     .level-desc {
       font-size: 8px;
-      color: #ddd;
+      color: #bbb;
+      line-height: 1.4;
+      font-family: sans-serif;
     }
 
     .help-content {
@@ -406,6 +430,7 @@ import { GameState } from '../../engine/types';
 export class MenuOverlayComponent {
   public gameStateService = inject(GameStateService);
   public GameState = GameState;
+  public levels = LEVELS_CONFIG;
 
   public startGame = output<number>();
   public resumeGame = output<void>();

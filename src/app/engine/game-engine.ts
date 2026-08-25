@@ -1,7 +1,7 @@
 import { AudioService } from '../audio/audio.service';
 import { GameStateService } from '../state/game-state.service';
 import { Bowser, BowserFire, Entity, Fireball, Goomba, Koopa, Mario, PiranhaPlant, PowerUpItem } from './entities';
-import { ALL_LEVELS } from './level-data';
+import { LEVELS_CONFIG } from '../config/levels.config';
 import { PhysicsEngine } from './physics';
 import { SpriteRenderer } from './sprites';
 import { FloatingText, GameState, LevelData, MarioPower, Particle, TileBouncing, TileType } from './types';
@@ -50,8 +50,10 @@ export class GameEngine {
       this.gameStateService.isCustomLevel.set(true);
       this.gameStateService.world.set(customData.worldName);
     } else {
-      const gen = ALL_LEVELS[levelIndex] || ALL_LEVELS[0];
-      this.level = gen();
+      const cfg = LEVELS_CONFIG[levelIndex] || LEVELS_CONFIG[0];
+      this.level = cfg.generate();
+      this.level.title = cfg.title;
+      this.level.description = cfg.description;
       this.gameStateService.isCustomLevel.set(false);
       this.gameStateService.setLevel(levelIndex, this.level.worldName);
     }
@@ -570,7 +572,7 @@ export class GameEngine {
 
   public advanceNextLevel(): void {
     const nextIdx = this.gameStateService.currentLevelIndex() + 1;
-    if (nextIdx < ALL_LEVELS.length) {
+    if (nextIdx < LEVELS_CONFIG.length) {
       this.startLevel(nextIdx);
     } else {
       this.gameStateService.setGameState(GameState.VICTORY);
