@@ -1,0 +1,40 @@
+<main class="arcade-cabinet">
+  @if (inEditor()) {
+    <app-level-editor 
+      (testLevel)="onTestCustomLevel($event)" 
+      (closeEditor)="onCloseEditor()">
+    </app-level-editor>
+  } @else {
+    <div class="game-frame">
+      <!-- Top NES Status HUD -->
+      <app-hud 
+        (openMenu)="onGoToTitle()"
+        (toggleGamepad)="onToggleGamepad()"
+        (toggleFullscreen)="onToggleFullscreen()">
+      </app-hud>
+
+      <!-- Main Retro Canvas Viewport -->
+      <div class="viewport-area">
+        <app-game-canvas></app-game-canvas>
+
+        <!-- Menu / Dialog Overlay -->
+        @if (gameStateService.gameState() !== GameState.PLAYING) {
+          <app-menu-overlay
+            (startGame)="onStartGame($event)"
+            (resumeGame)="onResumeGame()"
+            (restartLevel)="onRestartLevel()"
+            (restartGame)="onRestartGame()"
+            (goToTitle)="onGoToTitle()"
+            (openEditor)="onOpenEditor()">
+          </app-menu-overlay>
+        }
+      </div>
+
+      <!-- Touch / Virtual Controller Bar -->
+      @if (showGamepad()) {
+        <app-controls-overlay (buttonChange)="onButtonChange($event)"></app-controls-overlay>
+      }
+    </div>
+  }
+</main>
+
