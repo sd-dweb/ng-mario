@@ -1,6 +1,28 @@
 import { MarioPower, TileType } from './types';
 
 export class SpriteRenderer {
+  public static spritesImage: HTMLImageElement | null = null;
+  public static tilesImage: HTMLImageElement | null = null;
+  public static isLoaded = false;
+
+  // Initialize sprite sheet image from assets
+  static {
+    if (typeof window !== 'undefined') {
+      const sImg = new Image();
+      sImg.src = 'assets/sprites.png';
+      sImg.onload = () => {
+        SpriteRenderer.spritesImage = sImg;
+        SpriteRenderer.isLoaded = true;
+      };
+
+      const tImg = new Image();
+      tImg.src = 'assets/tiles.png';
+      tImg.onload = () => {
+        SpriteRenderer.tilesImage = tImg;
+      };
+    }
+  }
+
   // Color Palettes
   static readonly PALETTE = {
     marioRed: '#d82800',
@@ -49,7 +71,7 @@ export class SpriteRenderer {
   };
 
   /**
-   * Draw Mario sprite on Canvas 2D context
+   * Draw Mario sprite on Canvas 2D context using authentic NES spritesheet
    */
   static drawMario(
     ctx: CanvasRenderingContext2D,
@@ -77,7 +99,7 @@ export class SpriteRenderer {
       ctx.translate(-16, 0);
     }
 
-    // Palette selection
+    // Palette selection for procedural fallback / tint
     let hatColor = SpriteRenderer.PALETTE.marioRed;
     let shirtColor = SpriteRenderer.PALETTE.marioRed;
     let overallsColor = SpriteRenderer.PALETTE.marioBrown;
@@ -96,16 +118,60 @@ export class SpriteRenderer {
       overallsColor = colors[(cycle + 2) % colors.length];
     }
 
-    const u = 1; // 1 pixel unit (16x16 or 16x32)
+    // If NES spritesheet is loaded and standard power, draw high fidelity image
+    if (SpriteRenderer.spritesImage && power === MarioPower.SMALL && starTimer <= 0) {
+      let sx = 0;
+      let sy = 88;
+      const sw = 16;
+      const sh = 16;
 
-    if (state === 'die') {
-      // Dead Mario
-      this.renderSmallDeadMario(ctx, hatColor, overallsColor, skinColor);
+      if (state === 'die') {
+        sx = 96;
+      } else if (state === 'jump') {
+        sx = 80;
+      } else if (state === 'skid') {
+        sx = 64;
+      } else if (state === 'run') {
+        const step = Math.floor(animFrame) % 3;
+        sx = 16 + step * 16;
+      } else {
+        sx = 0;
+      }
+
+      ctx.drawImage(SpriteRenderer.spritesImage, sx, sy, sw, sh, 0, 0, sw, sh);
       ctx.restore();
       return;
     }
 
-    if (power === MarioPower.SMALL) {
+    if (SpriteRenderer.spritesImage && power === MarioPower.SUPER && starTimer <= 0) {
+      let sx = 112;
+      let sy = 88;
+      let sw = 16;
+      let sh = 32;
+
+      if (state === 'crouch') {
+        sx = 0;
+        sy = 120;
+      } else if (state === 'jump') {
+        sx = 192;
+      } else if (state === 'skid') {
+        sx = 176;
+      } else if (state === 'run') {
+        const step = Math.floor(animFrame) % 3;
+        sx = 128 + step * 16;
+      } else {
+        sx = 112;
+      }
+
+      ctx.drawImage(SpriteRenderer.spritesImage, sx, sy, sw, sh, 0, 0, sw, sh);
+      ctx.restore();
+      return;
+    }
+
+    // Procedural Fallback (supports Fire Mario & Star Mario custom color palettes)
+    if (state === 'die') {
+      this.renderSmallDeadMario(ctx, hatColor, overallsColor, skinColor);
+    } else if (power === MarioPower.SMALL) {
       this.renderSmallMario(ctx, state, animFrame, hatColor, overallsColor, skinColor);
     } else {
       this.renderSuperMario(ctx, state, animFrame, hatColor, overallsColor, skinColor);
@@ -148,7 +214,6 @@ export class SpriteRenderer {
 
     // Shirt & Overalls Body
     if (state === 'jump') {
-      // Jumping pose
       ctx.fillStyle = hat;
       ctx.fillRect(1, 7, 2, 3);
       ctx.fillRect(3, 8, 5, 3);
@@ -159,12 +224,10 @@ export class SpriteRenderer {
       ctx.fillRect(2, 12, 3, 3);
       ctx.fillRect(7, 11, 4, 3);
 
-      // Hands
       ctx.fillStyle = skin;
       ctx.fillRect(0, 6, 2, 2);
       ctx.fillRect(10, 6, 2, 2);
 
-      // Shoes
       ctx.fillStyle = overalls;
       ctx.fillRect(1, 14, 4, 2);
       ctx.fillRect(8, 13, 4, 2);
@@ -212,7 +275,6 @@ export class SpriteRenderer {
       ctx.fillRect(10, 7, 2, 2);
       ctx.fillRect(1, 8, 2, 2);
     } else {
-      // Idle
       ctx.fillStyle = hat;
       ctx.fillRect(2, 7, 7, 3);
       ctx.fillStyle = overalls;
@@ -234,18 +296,15 @@ export class SpriteRenderer {
     skin: string
   ): void {
     if (state === 'crouch') {
-      // Crouching Super Mario
       ctx.translate(0, 10);
       this.renderSmallMario(ctx, 'idle', 0, hat, overalls, skin);
       return;
     }
 
-    // Hat (Top 16x32)
     ctx.fillStyle = hat;
     ctx.fillRect(4, 2, 6, 2);
     ctx.fillRect(3, 4, 11, 2);
 
-    // Hair / Face
     ctx.fillStyle = overalls;
     ctx.fillRect(3, 6, 3, 2);
     ctx.fillRect(2, 8, 2, 4);
@@ -257,12 +316,10 @@ export class SpriteRenderer {
     ctx.fillRect(4, 10, 4, 2);
     ctx.fillRect(5, 12, 6, 2);
 
-    // Eyes / Moustache
     ctx.fillStyle = '#000';
     ctx.fillRect(9, 6, 2, 4);
     ctx.fillRect(8, 10, 5, 2);
 
-    // Body
     if (state === 'jump') {
       ctx.fillStyle = hat;
       ctx.fillRect(2, 14, 4, 6);
@@ -313,7 +370,6 @@ export class SpriteRenderer {
       ctx.fillRect(12, 14, 3, 3);
       ctx.fillRect(1, 16, 3, 3);
     } else {
-      // Idle
       ctx.fillStyle = hat;
       ctx.fillRect(3, 14, 9, 6);
       ctx.fillStyle = overalls;
@@ -356,6 +412,17 @@ export class SpriteRenderer {
     ctx.save();
     ctx.translate(Math.round(x), Math.round(y));
 
+    if (SpriteRenderer.spritesImage) {
+      if (state === 'flat') {
+        ctx.drawImage(SpriteRenderer.spritesImage, 32, 16, 16, 16, 0, 0, 16, 16);
+      } else {
+        const step = Math.floor(frame) % 2;
+        ctx.drawImage(SpriteRenderer.spritesImage, step * 16, 16, 16, 16, 0, 0, 16, 16);
+      }
+      ctx.restore();
+      return;
+    }
+
     if (state === 'flat') {
       ctx.fillStyle = SpriteRenderer.PALETTE.goombaBrown;
       ctx.fillRect(1, 10, 14, 4);
@@ -368,18 +435,15 @@ export class SpriteRenderer {
       return;
     }
 
-    // Mushroom Cap Head
     ctx.fillStyle = SpriteRenderer.PALETTE.goombaBrown;
     ctx.fillRect(4, 1, 8, 2);
     ctx.fillRect(2, 3, 12, 3);
     ctx.fillRect(1, 6, 14, 3);
     ctx.fillRect(0, 9, 16, 2);
 
-    // Face
     ctx.fillStyle = SpriteRenderer.PALETTE.goombaSkin;
     ctx.fillRect(4, 8, 8, 4);
 
-    // Eyebrows & Eyes
     ctx.fillStyle = '#000';
     ctx.fillRect(3, 7, 4, 1);
     ctx.fillRect(9, 7, 4, 1);
@@ -389,12 +453,10 @@ export class SpriteRenderer {
     ctx.fillRect(5, 9, 1, 2);
     ctx.fillRect(10, 9, 1, 2);
 
-    // Teeth
     ctx.fillStyle = '#fff';
     ctx.fillRect(5, 11, 1, 1);
     ctx.fillRect(10, 11, 1, 1);
 
-    // Feet
     ctx.fillStyle = SpriteRenderer.PALETTE.goombaBlack;
     const isStep = Math.floor(frame) % 2 === 0;
     if (isStep) {
@@ -423,10 +485,24 @@ export class SpriteRenderer {
     ctx.save();
     ctx.translate(Math.round(x), Math.round(y));
 
+    if (SpriteRenderer.spritesImage && !isRed) {
+      if (facing === 1) {
+        ctx.scale(-1, 1);
+        ctx.translate(-16, 0);
+      }
+      if (state === 'shell' || state === 'shell_spin') {
+        ctx.drawImage(SpriteRenderer.spritesImage, 160, 0, 16, 16, 0, 8, 16, 16);
+      } else {
+        const step = Math.floor(frame) % 2;
+        ctx.drawImage(SpriteRenderer.spritesImage, 224 + step * 16, 0, 16, 24, 0, 0, 16, 24);
+      }
+      ctx.restore();
+      return;
+    }
+
     const shellColor = isRed ? SpriteRenderer.PALETTE.koopaRed : SpriteRenderer.PALETTE.koopaGreen;
 
     if (state === 'shell' || state === 'shell_spin') {
-      // Shell only (16x16)
       ctx.fillStyle = shellColor;
       ctx.fillRect(2, 3, 12, 10);
       ctx.fillRect(4, 1, 8, 14);
@@ -444,14 +520,11 @@ export class SpriteRenderer {
       return;
     }
 
-    // Direction flip
     if (facing === 1) {
       ctx.scale(-1, 1);
       ctx.translate(-16, 0);
     }
 
-    // Walking Koopa (16x24)
-    // Head & Beak
     ctx.fillStyle = SpriteRenderer.PALETTE.koopaOrange;
     ctx.fillRect(1, 2, 7, 6);
     ctx.fillRect(0, 4, 3, 4);
@@ -460,14 +533,12 @@ export class SpriteRenderer {
     ctx.fillStyle = '#000';
     ctx.fillRect(5, 4, 2, 2);
 
-    // Shell
     ctx.fillStyle = shellColor;
     ctx.fillRect(5, 8, 10, 10);
     ctx.fillRect(7, 7, 7, 12);
     ctx.fillStyle = '#fff';
     ctx.fillRect(8, 10, 5, 6);
 
-    // Feet
     ctx.fillStyle = SpriteRenderer.PALETTE.koopaOrange;
     const isStep = Math.floor(frame) % 2 === 0;
     if (isStep) {
@@ -490,30 +561,25 @@ export class SpriteRenderer {
 
     const isOpen = Math.floor(frame * 3) % 2 === 0;
 
-    // Stem
     ctx.fillStyle = SpriteRenderer.PALETTE.pipeGreenDark;
     ctx.fillRect(6, 12, 4, 12);
 
-    // Head
     ctx.fillStyle = SpriteRenderer.PALETTE.marioRed;
     ctx.fillRect(2, 2, 12, 10);
     ctx.fillRect(4, 0, 8, 14);
 
-    // White polka dots
     ctx.fillStyle = '#fff';
     ctx.fillRect(4, 3, 2, 2);
     ctx.fillRect(10, 3, 2, 2);
     ctx.fillRect(3, 8, 2, 2);
     ctx.fillRect(11, 8, 2, 2);
 
-    // Mouth / Lips / Teeth
     ctx.fillStyle = '#fff';
     ctx.fillRect(1, 6, 14, isOpen ? 2 : 1);
     if (isOpen) {
       ctx.fillStyle = '#000';
       ctx.fillRect(3, 5, 10, 4);
       ctx.fillStyle = '#fff';
-      // Sharp teeth
       ctx.fillRect(4, 5, 1, 1);
       ctx.fillRect(7, 5, 1, 1);
       ctx.fillRect(10, 5, 1, 1);
@@ -536,53 +602,43 @@ export class SpriteRenderer {
       ctx.translate(-32, 0);
     }
 
-    // Bowser Body (32x32)
-    // Spiky Shell
     ctx.fillStyle = SpriteRenderer.PALETTE.bowserGreen;
     ctx.fillRect(14, 4, 14, 20);
     ctx.fillStyle = '#fc7400';
     ctx.fillRect(12, 6, 4, 16);
 
-    // Shell Spikes
     ctx.fillStyle = '#fff';
     ctx.fillRect(26, 6, 4, 3);
     ctx.fillRect(28, 12, 4, 3);
     ctx.fillRect(26, 18, 4, 3);
 
-    // Head
     ctx.fillStyle = SpriteRenderer.PALETTE.bowserGreen;
     ctx.fillRect(4, 6, 12, 10);
-    // Horns & Red Hair
     ctx.fillStyle = SpriteRenderer.PALETTE.marioRed;
     ctx.fillRect(8, 1, 8, 5);
     ctx.fillStyle = '#fff';
     ctx.fillRect(14, 2, 3, 4);
 
-    // Snout & Mouth
     ctx.fillStyle = SpriteRenderer.PALETTE.bowserOrange;
     ctx.fillRect(0, 10, 10, 8);
     ctx.fillStyle = '#fff';
     ctx.fillRect(1, 12, 2, 2);
     ctx.fillRect(6, 12, 2, 2);
 
-    // Eyes
     ctx.fillStyle = '#fff';
     ctx.fillRect(6, 6, 4, 3);
     ctx.fillStyle = '#d82800';
     ctx.fillRect(7, 7, 2, 2);
 
-    // Feet & Belly
     ctx.fillStyle = SpriteRenderer.PALETTE.bowserYellow;
     ctx.fillRect(6, 18, 10, 8);
     ctx.fillRect(4, 26, 8, 6);
     ctx.fillRect(16, 26, 8, 6);
 
-    // Claws
     ctx.fillStyle = '#fff';
     ctx.fillRect(2, 30, 4, 2);
     ctx.fillRect(14, 30, 4, 2);
 
-    // Fire breath
     if (breathFire) {
       ctx.fillStyle = SpriteRenderer.PALETTE.lavaRed;
       ctx.fillRect(-16, 12, 16, 4);
@@ -600,18 +656,35 @@ export class SpriteRenderer {
     ctx.save();
     ctx.translate(Math.round(x), Math.round(y));
 
+    if (SpriteRenderer.spritesImage) {
+      if (type === 'mushroom') {
+        ctx.drawImage(SpriteRenderer.spritesImage, 0, 0, 16, 16, 0, 0, 16, 16);
+        ctx.restore();
+        return;
+      } else if (type === '1up') {
+        ctx.drawImage(SpriteRenderer.spritesImage, 16, 0, 16, 16, 0, 0, 16, 16);
+        ctx.restore();
+        return;
+      } else if (type === 'flower') {
+        ctx.drawImage(SpriteRenderer.spritesImage, 32, 0, 16, 16, 0, 0, 16, 16);
+        ctx.restore();
+        return;
+      } else if (type === 'star') {
+        ctx.drawImage(SpriteRenderer.spritesImage, 48, 0, 16, 16, 0, 0, 16, 16);
+        ctx.restore();
+        return;
+      }
+    }
+
     if (type === 'mushroom' || type === '1up') {
       const capColor = type === 'mushroom' ? SpriteRenderer.PALETTE.mushroomRed : SpriteRenderer.PALETTE.koopaGreen;
-      // Cap
       ctx.fillStyle = capColor;
       ctx.fillRect(3, 1, 10, 2);
       ctx.fillRect(1, 3, 14, 6);
-      // White spots
       ctx.fillStyle = SpriteRenderer.PALETTE.mushroomWhite;
       ctx.fillRect(6, 2, 4, 4);
       ctx.fillRect(2, 5, 2, 3);
       ctx.fillRect(12, 5, 2, 3);
-      // Stem & Eyes
       ctx.fillStyle = SpriteRenderer.PALETTE.mushroomSkin;
       ctx.fillRect(4, 9, 8, 6);
       ctx.fillStyle = '#000';
@@ -620,15 +693,12 @@ export class SpriteRenderer {
     } else if (type === 'flower') {
       const colors = ['#fc7400', '#fc2800', '#f8b800'];
       const c = colors[Math.floor(frame * 8) % colors.length];
-      // Petals
       ctx.fillStyle = c;
       ctx.fillRect(4, 1, 8, 8);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(6, 3, 4, 4);
-      // Eyes
       ctx.fillStyle = '#000';
       ctx.fillRect(7, 4, 2, 2);
-      // Stem & leaves
       ctx.fillStyle = SpriteRenderer.PALETTE.pipeGreenLight;
       ctx.fillRect(7, 9, 2, 6);
       ctx.fillRect(4, 11, 3, 3);
@@ -643,7 +713,6 @@ export class SpriteRenderer {
       ctx.fillRect(3, 11, 10, 3);
       ctx.fillRect(2, 14, 4, 2);
       ctx.fillRect(10, 14, 4, 2);
-      // Eyes
       ctx.fillStyle = '#000';
       ctx.fillRect(5, 5, 1, 3);
       ctx.fillRect(9, 5, 1, 3);
@@ -696,6 +765,34 @@ export class SpriteRenderer {
     ctx.save();
     ctx.translate(Math.round(x), Math.round(y) + offsetY);
 
+    // If authentic tileset is loaded and overworld/underground, render from tiles.png
+    if (SpriteRenderer.tilesImage && theme === 'overworld') {
+      if (type === TileType.GROUND) {
+        ctx.drawImage(SpriteRenderer.tilesImage, 0, 0, 16, 16, 0, 0, 16, 16);
+        ctx.restore();
+        return;
+      } else if (type === TileType.BRICK) {
+        ctx.drawImage(SpriteRenderer.tilesImage, 16, 0, 16, 16, 0, 0, 16, 16);
+        ctx.restore();
+        return;
+      } else if (type === TileType.USED_BLOCK) {
+        ctx.drawImage(SpriteRenderer.tilesImage, 32, 0, 16, 16, 0, 0, 16, 16);
+        ctx.restore();
+        return;
+      } else if (
+        type === TileType.QUESTION_COIN ||
+        type === TileType.QUESTION_MUSHROOM ||
+        type === TileType.QUESTION_FLOWER ||
+        type === TileType.QUESTION_STAR ||
+        type === TileType.QUESTION_1UP
+      ) {
+        const animStep = Math.floor(frame * 4) % 3;
+        ctx.drawImage(SpriteRenderer.tilesImage, 64 + animStep * 16, 0, 16, 16, 0, 0, 16, 16);
+        ctx.restore();
+        return;
+      }
+    }
+
     switch (type) {
       case TileType.GROUND: {
         if (theme === 'underground') {
@@ -713,7 +810,6 @@ export class SpriteRenderer {
           ctx.fillRect(7, 0, 2, 8);
           ctx.fillRect(0, 8, 2, 8);
         } else {
-          // Overworld Ground
           ctx.fillStyle = SpriteRenderer.PALETTE.groundBrown;
           ctx.fillRect(0, 0, 16, 16);
           ctx.fillStyle = SpriteRenderer.PALETTE.groundLight;
@@ -732,7 +828,6 @@ export class SpriteRenderer {
           : (theme === 'castle' ? SpriteRenderer.PALETTE.castleDark : SpriteRenderer.PALETTE.brickBrown);
         ctx.fillStyle = brickBg;
         ctx.fillRect(0, 0, 16, 16);
-        // Mortar lines
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, 16, 1);
         ctx.fillRect(0, 7, 16, 2);
@@ -755,13 +850,11 @@ export class SpriteRenderer {
         ctx.fillRect(0, 15, 16, 1);
         ctx.fillRect(0, 0, 1, 16);
         ctx.fillRect(15, 0, 1, 16);
-        // Corner rivets
         ctx.fillStyle = '#000';
         ctx.fillRect(2, 2, 1, 1);
         ctx.fillRect(13, 2, 1, 1);
         ctx.fillRect(2, 13, 1, 1);
         ctx.fillRect(13, 13, 1, 1);
-        // Question Mark
         ctx.fillStyle = SpriteRenderer.PALETTE.questionBrown;
         ctx.fillRect(5, 3, 6, 2);
         ctx.fillRect(9, 5, 2, 2);
@@ -777,7 +870,6 @@ export class SpriteRenderer {
         ctx.fillRect(0, 15, 16, 1);
         ctx.fillRect(0, 0, 1, 16);
         ctx.fillRect(15, 0, 1, 16);
-        // Rivets
         ctx.fillStyle = '#222';
         ctx.fillRect(2, 2, 1, 1);
         ctx.fillRect(13, 2, 1, 1);
