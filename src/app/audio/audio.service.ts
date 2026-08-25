@@ -8,10 +8,13 @@ export class AudioService {
   public musicEnabled = signal<boolean>(true);
 
   private audioCtx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private sfxGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
+
   private musicInterval: any = null;
   private currentTrack: string | null = null;
   private musicStep = 0;
-  private isMuted = false;
 
   constructor() {
     // Initialized lazily on first user gesture
@@ -22,6 +25,21 @@ export class AudioService {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
         this.audioCtx = new AudioContextClass();
+
+        // Master Gain routing
+        this.masterGain = this.audioCtx.createGain();
+        this.masterGain.gain.setValueAtTime(this.soundEnabled() ? 1 : 0, this.audioCtx.currentTime);
+        this.masterGain.connect(this.audioCtx.destination);
+
+        // SFX Gain routing
+        this.sfxGain = this.audioCtx.createGain();
+        this.sfxGain.gain.setValueAtTime(this.soundEnabled() ? 1 : 0, this.audioCtx.currentTime);
+        this.sfxGain.connect(this.masterGain);
+
+        // Music Gain routing
+        this.musicGain = this.audioCtx.createGain();
+        this.musicGain.gain.setValueAtTime(this.musicEnabled() ? 0.8 : 0, this.audioCtx.currentTime);
+        this.musicGain.connect(this.masterGain);
       }
     }
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
@@ -37,26 +55,57 @@ export class AudioService {
   public toggleSound(): boolean {
     const next = !this.soundEnabled();
     this.soundEnabled.set(next);
+    const ctx = this.initContext();
+
+    if (ctx && this.masterGain && this.sfxGain) {
+      const now = ctx.currentTime;
+      this.masterGain.gain.cancelScheduledValues(now);
+      this.masterGain.gain.setValueAtTime(next ? 1 : 0, now);
+      this.sfxGain.gain.cancelScheduledValues(now);
+      this.sfxGain.gain.setValueAtTime(next ? 1 : 0, now);
+    }
+
+    if (!next) {
+      this.stopMusic();
+    } else if (this.musicEnabled() && this.currentTrack) {
+      this.playMusic(this.currentTrack, true);
+    }
     return next;
   }
 
   public toggleMusic(): boolean {
     const next = !this.musicEnabled();
     this.musicEnabled.set(next);
+    const ctx = this.initContext();
+
+    if (ctx && this.musicGain) {
+      const now = ctx.currentTime;
+      this.musicGain.gain.cancelScheduledValues(now);
+      this.musicGain.gain.setValueAtTime(next ? 0.8 : 0, now);
+    }
+
     if (!next) {
       this.stopMusic();
-    } else if (this.currentTrack) {
+    } else if (this.soundEnabled() && this.currentTrack) {
       this.playMusic(this.currentTrack, true);
     }
     return next;
+  }
+
+  private getSfxDestination(): AudioNode | null {
+    if (!this.soundEnabled()) return null;
+    const ctx = this.initContext();
+    if (!ctx) return null;
+    return this.sfxGain || this.masterGain || ctx.destination;
   }
 
   // --- Chiptune Sound Effects ---
 
   public playJump(isSuper = false): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -73,7 +122,7 @@ export class AudioService {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(dest);
 
     osc.start(now);
     osc.stop(now + 0.2);
@@ -81,8 +130,9 @@ export class AudioService {
 
   public playCoin(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const osc1 = ctx.createOscillator();
@@ -96,7 +146,7 @@ export class AudioService {
     gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
     osc1.connect(gain1);
-    gain1.connect(ctx.destination);
+    gain1.connect(dest);
 
     osc1.start(now);
     osc1.stop(now + 0.4);
@@ -104,8 +154,9 @@ export class AudioService {
 
   public playStomp(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
@@ -119,7 +170,7 @@ export class AudioService {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(dest);
 
     osc.start(now);
     osc.stop(now + 0.14);
@@ -127,8 +178,9 @@ export class AudioService {
 
   public playKick(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
@@ -142,7 +194,7 @@ export class AudioService {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(dest);
 
     osc.start(now);
     osc.stop(now + 0.18);
@@ -150,8 +202,9 @@ export class AudioService {
 
   public playPowerUp(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const notes = [330, 392, 659, 523, 587, 784, 988, 1046];
@@ -167,7 +220,7 @@ export class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.01, now + (idx + 1) * duration);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
 
       osc.start(now + idx * duration);
       osc.stop(now + (idx + 1) * duration);
@@ -176,8 +229,9 @@ export class AudioService {
 
   public playPowerDown(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const notes = [659, 587, 523, 440, 392, 330, 261];
@@ -193,7 +247,7 @@ export class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.01, now + (idx + 1) * duration);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
 
       osc.start(now + idx * duration);
       osc.stop(now + (idx + 1) * duration);
@@ -202,8 +256,9 @@ export class AudioService {
 
   public playFireball(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
@@ -217,7 +272,7 @@ export class AudioService {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(dest);
 
     osc.start(now);
     osc.stop(now + 0.1);
@@ -225,8 +280,9 @@ export class AudioService {
 
   public playBlockBump(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
@@ -240,7 +296,7 @@ export class AudioService {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(dest);
 
     osc.start(now);
     osc.stop(now + 0.09);
@@ -248,11 +304,11 @@ export class AudioService {
 
   public playBlockBreak(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
-    // Noise blast for brick shatter
     const bufferSize = ctx.sampleRate * 0.15;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const output = buffer.getChannelData(0);
@@ -274,15 +330,16 @@ export class AudioService {
 
     whiteNoise.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(dest);
 
     whiteNoise.start(now);
   }
 
   public playPipe(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const notes = [160, 200, 240, 200, 280, 240];
@@ -298,7 +355,7 @@ export class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.01, now + (idx + 1) * dur);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
 
       osc.start(now + idx * dur);
       osc.stop(now + (idx + 1) * dur);
@@ -307,8 +364,9 @@ export class AudioService {
 
   public playFlagpole(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
 
     const now = ctx.currentTime;
     const notes = [440, 494, 523, 587, 659, 698, 784, 880, 988, 1046];
@@ -324,7 +382,7 @@ export class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.01, now + (idx + 1) * dur);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
 
       osc.start(now + idx * dur);
       osc.stop(now + (idx + 1) * dur);
@@ -333,10 +391,11 @@ export class AudioService {
 
   public playDie(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
-
     this.stopMusic();
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
+
     const now = ctx.currentTime;
     const notes = [500, 400, 350, 300, 250, 200, 150];
     const dur = 0.08;
@@ -351,7 +410,7 @@ export class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.01, now + (idx + 1) * dur);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
 
       osc.start(now + idx * dur);
       osc.stop(now + (idx + 1) * dur);
@@ -360,10 +419,11 @@ export class AudioService {
 
   public playStageClear(): void {
     if (!this.soundEnabled()) return;
-    const ctx = this.initContext();
-    if (!ctx) return;
-
     this.stopMusic();
+    const dest = this.getSfxDestination();
+    const ctx = this.audioCtx;
+    if (!dest || !ctx) return;
+
     const now = ctx.currentTime;
     const fanfare = [
       { f: 392, d: 0.12 }, { f: 523, d: 0.12 }, { f: 659, d: 0.12 },
@@ -381,7 +441,7 @@ export class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.01, t + n.d);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
 
       osc.start(t);
       osc.stop(t + n.d);
@@ -396,7 +456,7 @@ export class AudioService {
     this.stopMusic();
     this.currentTrack = track;
 
-    if (!this.musicEnabled()) return;
+    if (!this.musicEnabled() || !this.soundEnabled()) return;
     const ctx = this.initContext();
     if (!ctx) return;
 
@@ -411,11 +471,13 @@ export class AudioService {
       ];
       const tempo = 125;
       this.musicInterval = setInterval(() => {
-        if (!this.musicEnabled()) return;
+        if (!this.musicEnabled() || !this.soundEnabled()) {
+          this.stopMusic();
+          return;
+        }
         const note = notes[this.musicStep % notes.length];
         if (note > 0) {
           this.playBeep(note, 'square', 0.08, 0.07);
-          // Simple bass harmony
           if (this.musicStep % 4 === 0) {
             this.playBeep(note / 2, 'triangle', 0.1, 0.08);
           }
@@ -431,7 +493,10 @@ export class AudioService {
       ];
       const tempo = 140;
       this.musicInterval = setInterval(() => {
-        if (!this.musicEnabled()) return;
+        if (!this.musicEnabled() || !this.soundEnabled()) {
+          this.stopMusic();
+          return;
+        }
         const note = notes[this.musicStep % notes.length];
         if (note > 0) {
           this.playBeep(note * 2, 'triangle', 0.09, 0.08);
@@ -446,7 +511,10 @@ export class AudioService {
       ];
       const tempo = 150;
       this.musicInterval = setInterval(() => {
-        if (!this.musicEnabled()) return;
+        if (!this.musicEnabled() || !this.soundEnabled()) {
+          this.stopMusic();
+          return;
+        }
         const note = notes[this.musicStep % notes.length];
         if (note > 0) {
           this.playBeep(note, 'sawtooth', 0.1, 0.06);
@@ -461,7 +529,10 @@ export class AudioService {
       ];
       const tempo = 80;
       this.musicInterval = setInterval(() => {
-        if (!this.musicEnabled()) return;
+        if (!this.musicEnabled() || !this.soundEnabled()) {
+          this.stopMusic();
+          return;
+        }
         const note = notes[this.musicStep % notes.length];
         if (note > 0) {
           this.playBeep(note, 'square', 0.05, 0.08);
@@ -479,8 +550,10 @@ export class AudioService {
   }
 
   private playBeep(freq: number, type: OscillatorType, duration: number, vol = 0.08): void {
+    if (!this.soundEnabled() || !this.musicEnabled()) return;
     const ctx = this.audioCtx;
-    if (!ctx) return;
+    const dest = this.musicGain || this.masterGain || ctx?.destination;
+    if (!ctx || !dest) return;
     try {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -493,7 +566,7 @@ export class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
 
       osc.start(now);
       osc.stop(now + duration);
