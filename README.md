@@ -2,7 +2,9 @@
 
 A complete, retro-authentic **Super Mario Bros** game built with **Angular 22**, pure **Angular Signals**, and zoneless change detection (`provideZonelessChangeDetection()`).
 
-![Super Mario Game Gameplay](screenshot.png)
+<p align="center">
+  <img src="screenshot.png" alt="Super Mario Game Gameplay" width="100%" />
+</p>
 
 ---
 
