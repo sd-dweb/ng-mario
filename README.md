@@ -1,59 +1,69 @@
-# NgMario
+# Super Mario — Angular 22 Signals Edition
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.4.
+A complete, retro-authentic **Super Mario Bros** game built with **Angular 22**, pure **Angular Signals**, and zoneless change detection (`provideZonelessChangeDetection()`).
 
-## Development server
+![Super Mario Game Gameplay](screenshot.png)
 
-To start a local development server, run:
+---
 
-```bash
-ng serve
-```
+## Features
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- **Angular 22 Zoneless Architecture**: Powered by `provideZonelessChangeDetection()` and pure Signal-driven state management for 60 FPS performance with zero Zone.js overhead.
+- **Deterministic 2D Canvas Physics Engine**: Authentic NES physics simulation with Mario momentum, acceleration, skidding friction, variable jump height, and tile collisions.
+- **Native Chiptune Synthesizer**: Web Audio API oscillator synthesis generating 8-bit NES sound effects and background melodies (Overworld, Underground, Castle, Starman) with zero external audio assets.
+- **4 Playable Worlds**:
+  - **World 1-1**: Classic Grassy Overworld with pipes, Goombas, Koopas, and Flagpole castle.
+  - **World 1-2**: Underground Cavern with blue brick ceilings and secret coin caches.
+  - **World 1-3**: Athletic Treetops with mushroom platforming and high gaps.
+  - **World 1-4**: Bowser's Castle featuring lava pits, Bowser fire-breath boss fight, and the golden Axe bridge collapse.
+- **In-Game Level Builder**: Interactive sandbox editor to draw custom tilemaps, place enemies/items, and test-play immediately.
+- **Responsive Retro Controls**: Full keyboard support and on-screen virtual gamepad (D-Pad + A/B action buttons) for touch & mobile devices.
 
-## Code scaffolding
+---
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Controls
 
-```bash
-ng generate component component-name
-```
+| Action | Keyboard | Virtual Gamepad (Touch / Mouse) |
+| :--- | :--- | :--- |
+| **Move Left / Right** | `←` `→` / `A`, `D` | Virtual D-Pad Left / Right |
+| **Crouch / Enter Pipe** | `↓` / `S` | Virtual D-Pad Down |
+| **Jump** | `Z` / `Space` | **A** Button |
+| **Sprint / Shoot Fireball** | `X` / `Shift` | **B** Button |
+| **Pause** | `P` / `Esc` | HUD Menu Button (`☰`) |
+| **Toggle Sound** | `🔊` / `🔇` | Master Mute / Unmute |
+| **Toggle Music** | `🎵` / `⏹️` | BGM Mute / Unmute |
+| **Toggle Gamepad** | `🎮` | Show / Hide Virtual Gamepad |
+| **Fullscreen** | `⛶` | Enter / Exit Fullscreen |
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+---
 
-```bash
-ng generate --help
-```
+## Getting Started
 
-## Building
+### Prerequisites
+- Node.js (v18+)
+- npm
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+### Installation & Development Server
 
 ```bash
-ng e2e
+# Clone the repository
+git clone git@github.com:sd-dweb/ng-mario.git
+cd ng-mario
+
+# Install dependencies
+npm install
+
+# Start development server
+npm start
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Open `http://localhost:4200` in your browser.
 
-## Additional Resources
+### Production Build
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```bash
+npm run build
+```
+
+The optimized build artifacts will be generated in the `dist/ng-mario` directory.
+
