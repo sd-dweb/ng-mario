@@ -13,7 +13,7 @@ import { GameState, LevelData } from '../../engine/types';
     <div class="canvas-wrapper">
       <canvas 
         #gameCanvas 
-        width="256" 
+        width="426" 
         height="240" 
         class="nes-canvas">
       </canvas>
@@ -46,7 +46,7 @@ import { GameState, LevelData } from '../../engine/types';
       max-height: 100%;
       max-width: 100%;
       object-fit: contain;
-      aspect-ratio: 256 / 240;
+      aspect-ratio: 16 / 9;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       background: #000000;
