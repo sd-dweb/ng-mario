@@ -666,11 +666,13 @@ export class SpriteRenderer {
         ctx.restore();
         return;
       } else if (type === 'flower') {
-        ctx.drawImage(SpriteRenderer.spritesImage, 32, 0, 16, 16, 0, 0, 16, 16);
+        const animStep = Math.floor(frame * 8) % 4;
+        ctx.drawImage(SpriteRenderer.spritesImage, 32 + animStep * 16, 0, 16, 16, 0, 0, 16, 16);
         ctx.restore();
         return;
       } else if (type === 'star') {
-        ctx.drawImage(SpriteRenderer.spritesImage, 48, 0, 16, 16, 0, 0, 16, 16);
+        const animStep = Math.floor(frame * 12) % 4;
+        ctx.drawImage(SpriteRenderer.spritesImage, 96 + animStep * 16, 0, 16, 16, 0, 0, 16, 16);
         ctx.restore();
         return;
       }

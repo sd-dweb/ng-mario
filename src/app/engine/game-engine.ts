@@ -675,6 +675,9 @@ export class GameEngine {
       this.renderBackgroundScenery(ctx);
     }
 
+    // Render emerging items behind question blocks
+    this.items.filter(i => i.emerging).forEach(i => i.render(ctx, this.cameraX));
+
     // Render Tilemap
     const startCol = Math.max(0, Math.floor(this.cameraX / 16));
     const endCol = Math.min(this.level.tiles[0].length - 1, Math.ceil((this.cameraX + canvas.width) / 16));
@@ -691,8 +694,8 @@ export class GameEngine {
       }
     }
 
-    // Render Items
-    this.items.forEach(i => i.render(ctx, this.cameraX));
+    // Render active (non-emerging) Items
+    this.items.filter(i => !i.emerging).forEach(i => i.render(ctx, this.cameraX));
 
     // Render Enemies
     this.enemies.forEach(e => e.render(ctx, this.cameraX));

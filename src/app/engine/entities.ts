@@ -388,6 +388,7 @@ export class PowerUpItem extends Entity {
   public emerging = true;
   public emergeY = 0;
   public targetY = 0;
+  public animFrame = 0;
 
   constructor(x: number, y: number, itemType: 'mushroom' | '1up' | 'flower' | 'star') {
     super();
@@ -403,6 +404,7 @@ export class PowerUpItem extends Entity {
   }
 
   update(dt: number, gameEngine: any): void {
+    this.animFrame += dt;
     if (this.emerging) {
       this.y -= dt * 24;
       if (this.y <= this.targetY) {
@@ -427,7 +429,7 @@ export class PowerUpItem extends Entity {
 
   render(ctx: CanvasRenderingContext2D, cameraX: number): void {
     const rx = this.x - cameraX;
-    SpriteRenderer.drawItem(ctx, rx, this.y, this.itemType, 0);
+    SpriteRenderer.drawItem(ctx, rx, this.y, this.itemType, this.animFrame);
   }
 }
 
